@@ -26,17 +26,17 @@ public class LocalRedisWorkIdChoose extends AbstractWorkIdChooseTemplate impleme
     }
 
     @Override
-    public WorkIdWrapper chooseWorkId() {
+    public idWrapper chooseId() {
         DefaultRedisScript redisScript = new DefaultRedisScript();
         redisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/chooseWorkIdLua.lua")));
+        redisScript.setResultType(List.class);
         List<Long> luaResultList = null;
         try {
-            redisScript.setResultType(List.class);
             luaResultList = (ArrayList) this.stringRedisTemplate.execute(redisScript, null);
         } catch (Exception ex) {
             log.error("Redis Lua 脚本获取 WorkId 失败", ex);
         }
-        return CollUtil.isNotEmpty(luaResultList) ? new WorkIdWrapper(luaResultList.get(0), luaResultList.get(1)) : new RandomWorkIdChoose().chooseWorkId();
+        return CollUtil.isNotEmpty(luaResultList) ? new idWrapper(luaResultList.get(0), luaResultList.get(1)) : new RandomWorkIdChoose().chooseId();
     }
 
     @Override

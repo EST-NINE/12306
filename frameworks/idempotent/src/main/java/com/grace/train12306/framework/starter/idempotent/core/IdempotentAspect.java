@@ -1,10 +1,10 @@
 package com.grace.train12306.framework.starter.idempotent.core;
 
+import com.grace.train12306.framework.starter.idempotent.annotation.Idempotent;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import com.grace.train12306.framework.starter.idempotent.annotation.Idempotent;
 
 import java.lang.reflect.Method;
 
@@ -20,24 +20,25 @@ public final class IdempotentAspect {
     @Around("@annotation(com.grace.train12306.framework.starter.idempotent.annotation.Idempotent)")
     public Object idempotentHandler(ProceedingJoinPoint joinPoint) throws Throwable {
         Idempotent idempotent = getIdempotent(joinPoint);
-        IdempotentExecuteHandler instance = IdempotentExecuteHandlerFactory.getInstance(idempotent.scene(), idempotent.type());
+        // 拿到对应的幂等注解处理器
+        IdempotentExecuteHandler instance = IdempotentExecuteHandlerFactory.getInstance(idempotent.scene());
         Object resultObj;
         try {
+            // 对方法进行幂等处理
             instance.execute(joinPoint, idempotent);
+            // 执行方法
             resultObj = joinPoint.proceed();
+            // 一些后处理，如释放锁资源，修改消费状态，设置幂等标识
             instance.postProcessing();
         } catch (RepeatConsumptionException ex) {
-            /**
-             * 触发幂等逻辑时可能有两种情况：
-             *    * 1. 消息还在处理，但是不确定是否执行成功，那么需要返回错误，方便 RocketMQ 再次通过重试队列投递
-             *    * 2. 消息处理成功了，该消息直接返回成功即可
-             */
             if (!ex.getError()) {
+                // 消息处理成功了，直接返回
                 return null;
             }
+            // 消息正在处理中，抛出异常，交给上层处理
             throw ex;
         } catch (Throwable ex) {
-            // 客户端消费存在异常，需要删除幂等标识方便下次 RocketMQ 再次通过重试队列投递
+            // 客户端消费存在异常，进行异常处理
             instance.exceptionProcessing();
             throw ex;
         } finally {

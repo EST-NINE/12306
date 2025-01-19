@@ -38,13 +38,12 @@ public final class JWTUtil {
         customerUserMap.put(USER_ID_KEY, userInfo.getUserId());
         customerUserMap.put(USER_NAME_KEY, userInfo.getUsername());
         customerUserMap.put(REAL_NAME_KEY, userInfo.getRealName());
-        String jwtToken = Jwts.builder()
+        return Jwts.builder()
                 .signWith(SignatureAlgorithm.HS512, KEY)
                 .setIssuedAt(new Date())
                 .setIssuer(ISS)
                 .setSubject(JSON.toJSONString(customerUserMap))
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION * 1000))
                 .compact();
-        return jwtToken;
     }
 }
